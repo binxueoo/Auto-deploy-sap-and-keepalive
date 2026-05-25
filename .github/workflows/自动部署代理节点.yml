@@ -223,25 +223,36 @@ jobs:
 
     - name: Login to Cloud Foundry
       run: |
-        cf login -a ${{ env.CF_API }} -u "${{ secrets.EMAIL }}" -p "${{ secrets.PASSWORD }}" || { echo "CF登录失败，请检查EMAIL和PASSWORD secrets"; exit 1; }
+        echo "--- 第一步: 登录CF ---"
+        cf login -a ${{ env.CF_API }} -u "${{ secrets.EMAIL }}" -p "${{ secrets.PASSWORD }}" && echo "登录成功" || { echo "CF登录失败，请检查EMAIL和PASSWORD secrets"; exit 1; }
 
-        ORG=$(cf orgs | awk 'NR==4 {print $1}')
+        echo "--- 第二步: 查看当前target状态 ---"
+        cf target || echo "未设置target"
+
+        echo "--- 第三步: 获取组织列表 ---"
+        cf orgs || echo "获取组织列表失败"
+        ORG=$(cf orgs 2>/dev/null | awk 'NR>=4 {print $1}' | head -1)
+        echo "获取到的ORG=[$ORG]"
         if [ -z "$ORG" ]; then
-          echo "未找到组织，尝试获取所有组织..."
-          ORG=$(cf orgs | tail -n +4 | head -1)
+          echo "错误: 未找到任何组织，请确认SAP账户已正确设置"
+          echo "可能原因: SAP试用账户未激活、EMAIL/PASSWORD错误、或该区域无可用组织"
+          exit 1
         fi
-        echo "Selected org: $ORG"
         echo "ORG=$ORG" >> $GITHUB_ENV
 
-        SPACE=$(cf spaces | awk 'NR==4 {print $1}')
+        echo "--- 第四步: 获取空间列表 ---"
+        cf spaces || echo "获取空间列表失败"
+        SPACE=$(cf spaces 2>/dev/null | awk 'NR>=4 {print $1}' | head -1)
+        echo "获取到的SPACE=[$SPACE]"
         if [ -z "$SPACE" ]; then
-          echo "未找到空间，尝试获取所有空间..."
-          SPACE=$(cf spaces | tail -n +4 | head -1)
+          echo "错误: 未找到任何空间，请先在SAP CF控制台创建一个空间"
+          exit 1
         fi
-        echo "Selected space: $SPACE"
         echo "SPACE=$SPACE" >> $GITHUB_ENV
 
+        echo "--- 第五步: 用组织和空间重新登录 ---"
         cf login -a ${{ env.CF_API }} -u "${{ secrets.EMAIL }}" -p "${{ secrets.PASSWORD }}" -o "$ORG" -s "$SPACE" || { echo "CF重新登录失败"; exit 1; }
+        cf target
 
     - name: Clean up existing apps to free resources
       run: |
