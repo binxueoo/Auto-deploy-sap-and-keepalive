@@ -120,7 +120,7 @@ jobs:
             echo "APP_NAME=aws-jp$RANDOM_STR" >> $GITHUB_ENV
             ;;
           "AWS-SG(Singapore)")
-            echo "CF_API=https://api.cf.ap11.hana.ondemand.com" >> $GITHUB_ENV
+            echo "CF_API=https://api.cf.ap21.hana.ondemand.com" >> $GITHUB_ENV
             echo "APP_NAME=aws-sg$RANDOM_STR" >> $GITHUB_ENV
             ;;
           "GCP-AU(Sydney)")
