@@ -259,7 +259,8 @@ add_cron_job() {
     
     # 检查定时任务是否已经存在
     if ! crontab -l 2>/dev/null | grep -q "$SCRIPT_PATH"; then
-        (crontab -l 2>/dev/null; echo "*/2 8-9 * * * /bin/bash $SCRIPT_PATH >> /root/keep-sap.log 2>&1") | crontab -
+        (crontab -l 2>/dev/null; echo "*/3 * * * *
+ /bin/bash $SCRIPT_PATH >> /root/keep-sap.log 2>&1") | crontab -
         green "已添加计划任务，8-9点每两分钟执行一次"
     else
         green "计划任务已存在，跳过添加计划任务"
