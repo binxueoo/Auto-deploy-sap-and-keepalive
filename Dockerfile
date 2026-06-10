@@ -1,4 +1,4 @@
-FROM ghcr.io/eooce/nodejs-main
+FROM ghcr.io/eooce/nodejs:latest
 
 WORKDIR /tmp
 
