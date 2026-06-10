@@ -1,0 +1,42 @@
+name: Build Custom Argo Image
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download fixed index.js
+        run: |
+          curl -sL "https://raw.githubusercontent.com/binxueoo/LWargo1218/main/index.js" -o index.js
+          ls -la index.js
+
+      - name: Create Dockerfile
+        run: |
+          cat > Dockerfile << 'EOF'
+FROM ghcr.io/eooce/nodejs:main
+COPY index.js /app/index.js
+EOF
+          cat Dockerfile
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/binxueoo/argo-fixed:latest
