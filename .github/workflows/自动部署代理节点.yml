@@ -271,10 +271,11 @@ jobs:
           echo "没有已部署的应用，无需清理"
         fi
 
-      - name: Download fixed index.js
+      - name: Test Docker image availability
         run: |
-          curl -sL "https://raw.githubusercontent.com/binxueoo/LWargo1218/main/index.js" -o index.js
-
+          echo "Testing if ghcr.io/binxueoo/lwrail:2026 is accessible..."
+          docker pull ghcr.io/binxueoo/lwrail:2026 && echo "Image pull successful!" || echo "Image pull failed!"
+          echo "DOCKER_IMAGE=ghcr.io/binxueoo/lwrail:2026" >> $GITHUB_ENV
       - name: Build custom Docker image with fixed index.js
         run: |
           cat > Dockerfile.fixed << 'DOCKERFILE'
