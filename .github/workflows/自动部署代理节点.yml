@@ -346,6 +346,12 @@ jobs:
       run: |
         cf restage ${{ env.APP_NAME }}
 
+    - name: Check app logs
+      run: |
+        echo "=== Environment variables ==="
+        cf env ${{ env.APP_NAME }}
+        echo "=== Recent logs ==="
+        cf logs ${{ env.APP_NAME }} --recent 2>&1
     - name: Verify deployment
       run: |
         cf app ${{ env.APP_NAME }}
