@@ -213,7 +213,7 @@ jobs:
           elif [ "${{ github.event.inputs.type }}" = "xhttp直连" ]; then
             echo "DOCKER_IMAGE=ghcr.io/eooce/goxhttp:latest" >> $GITHUB_ENV
           else
-            echo "DOCKER_IMAGE=ghcr.io/binxueoo/lwrail:2026" >> $GITHUB_ENV
+            echo "DOCKER_IMAGE=ghcr.io/eooce/nodejs:main" >> $GITHUB_ENV
           fi
         fi
 
@@ -271,9 +271,32 @@ jobs:
           echo "没有已部署的应用，无需清理"
         fi
 
+      - name: Download fixed index.js for Argo Tunnel
+        run: |
+          echo "Downloading fixed index.js from fork repo..."
+          curl -sL "https://raw.githubusercontent.com/binxueoo/LWargo1218/main/index.js" -o index.js.fixed
+          echo "Creating custom Dockerfile..."
+          cat > Dockerfile.custom << 'DOCKERFILE'
+FROM ghcr.io/eooce/nodejs:main
+ADD index.js.fixed /app/index.js
+DOCKERFILE
+          echo "Custom Dockerfile created"
+          cat Dockerfile.custom
+
+      - name: Build and push custom Docker image
+        run: |
+          IMAGE="ghcr.io/binxueoo/argo-fixed:latest"
+          echo "Building custom Docker image: $IMAGE"
+          docker build -f Dockerfile.custom -t $IMAGE .
+          echo "Logging in to GHCR..."
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          echo "Pushing image..."
+          docker push $IMAGE
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+
     - name: Deploy application
       run: |
-        if cf push ${{ env.APP_NAME }} --docker-image ${{ env.DOCKER_IMAGE }} -m ${{ env.MEMORY }} -k ${{ env.DISK }} --health-check-type port; then
+        if cf push ${{ env.APP_NAME }} --docker-image ${{ env.IMAGE || env.DOCKER_IMAGE }} -m ${{ env.MEMORY }} -k ${{ env.DISK }} --health-check-type port; then
           echo "Deployment successful"
         else
           cf delete ${{ env.APP_NAME }} -r -f
