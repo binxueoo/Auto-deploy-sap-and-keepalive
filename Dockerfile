@@ -1,10 +1,8 @@
 FROM ghcr.io/eooce/nodejs:latest
 
-WORKDIR /tmp
-
-# Replace index.js with fixed version from fork repo
+# Replace index.js with fixed version that writes tunnel.yml for token mode
 COPY index.js /tmp/index.js
 
-EXPOSE 3000/tcp
+WORKDIR /tmp
 
 CMD ["node", "index.js"]
