@@ -4,16 +4,16 @@ on:
   workflow_dispatch:
     inputs:
       type:
-        description: 'ѡ����Ľڵ�����'
+        description: 'Select node type'
         required: true
-        default: 'Argo���CDN'
+        default: 'Argo'
         type: choice
         options:
-          - wsֱ��
-          - xhttpֱ��
-          - Argo���CDN
+          - ws
+          - xhttp
+          - Argo
       region:
-        description: 'ѡ��������'
+        description: 'Select region'
         required: true
         default: 'US(free)'
         type: choice
@@ -21,7 +21,7 @@ on:
           - SG(free)
           - US(free)
           - AWS-AU(Sydney)
-          - AWS-BR(S?o Paulo)
+          - AWS-BR(Sao Paulo)
           - AWS-KR(Seoul)
           - AWS-CA(Montreal)
           - AWS-US(VA)
@@ -30,7 +30,7 @@ on:
           - AWS-JP(Tokyo)
           - AWS-SG(Singapore)
           - GCP-AU(Sydney)
-          - GCP-BR(S?o Paulo)
+          - GCP-BR(Sao Paulo)
           - GCP-US(IA)
           - GCP-EU(Frankfurt)
           - GCP-JP(Osaka)
@@ -39,7 +39,7 @@ on:
           - GCP-IN(Mumbai)
           - GCP-KSA(Dammam)
           - Azure-AU(Sydney)
-          - Azure-BR(S?o Paulo)
+          - Azure-BR(Sao Paulo)
           - Azure-CA(Montreal)
           - Azure-US(VA)
           - Azure-US(WA)
@@ -49,7 +49,7 @@ on:
           - Neo-UAE(Dubai)
           - Neo-KSA(Riyadh)
       app_name:
-        description: 'Ӧ�����ƣ���ѡ��������Զ����ɣ�'
+        description: 'App name (optional, leave empty for auto-generate)'
         required: false
         default: ''
 
@@ -115,117 +115,9 @@ jobs:
             echo "CF_API=https://api.cf.us10-001.hana.ondemand.com" >> $GITHUB_ENV
             echo "APP_NAME=free-us$RANDOM_STR" >> $GITHUB_ENV
             ;;
-          "AWS-AU(Sydney)")
-            echo "CF_API=https://api.cf.ap10.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=aws-au$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "AWS-BR(S?o Paulo)")
-            echo "CF_API=https://api.cf.br10.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=aws-br$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "AWS-KR(Seoul)")
-            echo "CF_API=https://api.cf.ap12.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=aws-kr$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "AWS-CA(Montreal)")
-            echo "CF_API=https://api.cf.ca10.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=aws-ca$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "AWS-US(VA)")
+          *)
             echo "CF_API=https://api.cf.us10-001.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=aws-usva$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "AWS-US(OR)")
-            echo "CF_API=https://api.cf.us11.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=aws-usor$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "AWS-EU(Frankfurt)")
-            echo "CF_API=https://api.cf.eu10-005.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=aws-eu$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "AWS-JP(Tokyo)")
-            echo "CF_API=https://api.cf.jp10.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=aws-jp$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "AWS-SG(Singapore)")
-            echo "CF_API=https://api.cf.ap21.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=aws-sg$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "GCP-AU(Sydney)")
-            echo "CF_API=https://api.cf.ap30.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=gcp-au$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "GCP-BR(S?o Paulo)")
-            echo "CF_API=https://api.cf.br30.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=gcp-br$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "GCP-US(IA)")
-            echo "CF_API=https://api.cf.us30.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=gcp-us$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "GCP-EU(Frankfurt)")
-            echo "CF_API=https://api.cf.eu30.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=gcp-eu$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "GCP-JP(Osaka)")
-            echo "CF_API=https://api.cf.jp30.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=gcp-jpo$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "GCP-JP(Tokyo)")
-            echo "CF_API=https://api.cf.jp31.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=gcp-jpt$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "GCP-IL(Tel Aviv)")
-            echo "CF_API=https://api.cf.il30.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=gcp-il$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "GCP-IN(Mumbai)")
-            echo "CF_API=https://api.cf.in30.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=gcp-in$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "GCP-KSA(Dammam)")
-            echo "CF_API=https://api.cf.sa31.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=gcp-sa$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "Azure-AU(Sydney)")
-            echo "CF_API=https://api.cf.ap20.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=az-au$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "Azure-BR(S?o Paulo)")
-            echo "CF_API=https://api.cf.br20.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=az-br$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "Azure-CA(Montreal)")
-            echo "CF_API=https://api.cf.ca20.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=az-ca$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "Azure-US(VA)")
-            echo "CF_API=https://api.cf.us21.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=az-va$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "Azure-US(WA)")
-            echo "CF_API=https://api.cf.us20.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=az-wa$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "Azure-EU(Netherlands)")
-            echo "CF_API=https://api.cf.eu20-001.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=az-eu$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "Azure-JP(Tokyo)")
-            echo "CF_API=https://api.cf.jp20.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=az-jp$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "Azure-SG(Singapore)")
-            echo "CF_API=https://api.cf.ap21.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=az-sg$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "Neo-UAE(Dubai)")
-            echo "CF_API=https://api.cf.neo-ae1.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=neo-uae$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          "Neo-KSA(Riyadh)")
-            echo "CF_API=https://api.cf.neo-sa1.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=neo-ksa$RANDOM_STR" >> $GITHUB_ENV
+            echo "APP_NAME=free-us$RANDOM_STR" >> $GITHUB_ENV
             ;;
         esac
 
@@ -239,87 +131,39 @@ jobs:
           echo "DOCKER_IMAGE=ghcr.io/binxueoo/sap-node:latest" >> $GITHUB_ENV
         fi
 
-        echo "ʹ��API�˵�: $CF_API"
-        echo "Ӧ������: $APP_NAME"
-        echo "������: ${{ env.DOCKER_IMAGE }}"
+        echo "CF_API=$CF_API"
+        echo "APP_NAME=$APP_NAME"
+        echo "DOCKER_IMAGE=${{ env.DOCKER_IMAGE }}"
 
     - name: Login to Cloud Foundry
       run: |
-        echo "--- ��һ��: ��¼CF ---"
-        cf login -a ${{ env.CF_API }} -u "${{ secrets.EMAIL }}" -p "${{ secrets.PASSWORD }}" && echo "��¼�ɹ�" || { echo "CF��¼ʧ�ܣ�����EMAIL��PASSWORD secrets"; exit 1; }
+        echo "--- Step 1: Login CF ---"
+        cf login -a ${{ env.CF_API }} -u "${{ secrets.EMAIL }}" -p "${{ secrets.PASSWORD }}" && echo "Login OK" || { echo "CF login failed"; exit 1; }
 
-        echo "--- �ڶ���: �鿴��ǰtarget״̬ ---"
-        cf target || echo "δ����target"
-
-        echo "--- ������: ��ȡ��֯�б� ---"
-        cf orgs || echo "��ȡ��֯�б�ʧ��"
+        echo "--- Step 2: Get org ---"
         ORG=$(cf orgs 2>/dev/null | awk 'NR>=4 {print $1}' | head -1)
-        echo "��ȡ����ORG=[$ORG]"
-        if [ -z "$ORG" ]; then
-          echo "����: δ�ҵ��κ���֯����ȷ��SAP�˻�����ȷ����"
-          exit 1
-        fi
+        if [ -z "$ORG" ]; then echo "No org found"; exit 1; fi
         echo "ORG=$ORG" >> $GITHUB_ENV
 
-        echo "--- ���Ĳ�: ��ȡ�ռ��б� ---"
-        cf spaces || echo "��ȡ�ռ��б�ʧ��"
+        echo "--- Step 3: Get space ---"
         SPACE=$(cf spaces 2>/dev/null | awk 'NR>=4 {print $1}' | head -1)
-        echo "��ȡ����SPACE=[$SPACE]"
-        if [ -z "$SPACE" ]; then
-          echo "����: δ�ҵ��κοռ䣬������SAP CF����̨����һ���ռ�"
-          exit 1
-        fi
+        if [ -z "$SPACE" ]; then echo "No space found"; exit 1; fi
         echo "SPACE=$SPACE" >> $GITHUB_ENV
 
-        echo "--- ���岽: ����֯�Ϳռ����µ�¼ ---"
-        cf login -a ${{ env.CF_API }} -u "${{ secrets.EMAIL }}" -p "${{ secrets.PASSWORD }}" -o "$ORG" -s "$SPACE" || { echo "CF���µ�¼ʧ��"; exit 1; }
+        echo "--- Step 4: Re-login with org/space ---"
+        cf login -a ${{ env.CF_API }} -u "${{ secrets.EMAIL }}" -p "${{ secrets.PASSWORD }}" -o "$ORG" -s "$SPACE" || { echo "Re-login failed"; exit 1; }
         cf target
 
-    - name: Clean up existing apps to free resources
+    - name: Clean up existing apps
       run: |
-        echo "����Ѳ����Ӧ��..."
         APPS=$(cf apps | awk 'NR>3 {print $1}')
         if [ -n "$APPS" ]; then
-          echo "�����Ѳ����Ӧ��:"
-          echo "$APPS"
-          echo "�����Ӧ���ͷ���Դ..."
           for app in $APPS; do
             cf delete "$app" -r -f
           done
-          echo "�ȴ��������..."
           sleep 10
-        else
-          echo "û���Ѳ����Ӧ�ã���������"
         fi
 
-    # Env vars will be set via manifest.yml
-      run: |
-        cat > manifest.yml << 'MANIFEST_EOF'
-applications:
-  - name: ${{ env.APP_NAME }}
-    memory: ${{ env.MEMORY }}
-    disk_quota: ${{ env.DISK }}
-    docker:
-      image: ${{ env.DOCKER_IMAGE }}
-    health-check-type: port
-    env:
-      NAME: SAP
-      UUID: ${{ secrets.UUID }}
-      NEZHA_SERVER: ${{ secrets.NEZHA_SERVER }}
-      NEZHA_PORT: ${{ secrets.NEZHA_PORT }}
-      NEZHA_KEY: ${{ secrets.NEZHA_KEY }}
-      ARGO_PORT: ${{ secrets.ARGO_PORT }}
-      ARGO_DOMAIN: ${{ secrets.ARGO_DOMAIN }}
-      ARGO_AUTH: ${{ secrets.ARGO_AUTH }}
-      SUB_PATH: ${{ secrets.SUB_PATH }}
-      CFIP: ${{ secrets.CFIP || 'cf.877774.xyz' }}
-      CFPORT: ${{ secrets.CFPORT }}
-      CHAT_ID: ${{ secrets.CHAT_ID }}
-      BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-MANIFEST_EOF
-        echo "=== manifest.yml ==="
-        cat manifest.yml | grep -v "ARGO_AUTH" | grep -v "NEZHA_KEY" | grep -v "UUID"
-        echo "ARGO_AUTH is set: $(grep -c 'ARGO_AUTH' manifest.yml)"
     - name: Deploy application
       run: |
         echo "Deploying with image: ${{ env.DOCKER_IMAGE }}"
@@ -327,11 +171,7 @@ MANIFEST_EOF
           echo "Deployment successful"
         else
           cf delete ${{ env.APP_NAME }} -r -f
-          echo "����ʧ�ܣ�����ԭ��"
-          echo "1. �ڴ����㣨��ȷ��SAP�˻����㹻��"
-          echo "2. Docker������ȡʧ�ܣ�����: ${{ env.DOCKER_IMAGE }}��"
-          echo "3. ��������"
-          echo "���飺����8:20-9:00�ٳ��Բ��𣬻��� DOCKER_IMAGE secret �Ƿ�������ȷ"
+          echo "Deployment failed"
           exit 1
         fi
 
@@ -350,25 +190,7 @@ MANIFEST_EOF
         cf set-env ${{ env.APP_NAME }} CFPORT "${{ secrets.CFPORT }}"
         cf set-env ${{ env.APP_NAME }} CHAT_ID "${{ secrets.CHAT_ID }}"
         cf set-env ${{ env.APP_NAME }} BOT_TOKEN "${{ secrets.BOT_TOKEN }}"
-
-        if [ -f .env ]; then
-          while IFS= read -r line; do
-            if [[ ! "$line" =~ ^# ]] && [[ -n "$line" ]]; then
-              IFS='=' read -r key value <<< "$line"
-              cf set-env ${{ env.APP_NAME }} "$key" "$value"
-            fi
-          done < .env
-        fi
-
-        if [[ "${{ env.DOCKER_IMAGE }}" =~ (xhttp|goxhttp|ws) ]]; then
-          ROUTE=$(cf app ${{ env.APP_NAME }} | grep "routes:" | awk '{print $2}')
-          if [ -n "$ROUTE" ]; then
-            echo "���� DOMAIN ��������Ϊ: $ROUTE"
-            cf set-env ${{ env.APP_NAME }} DOMAIN "$ROUTE"
-          else
-            echo "δ�ҵ�Ӧ��·�ɣ��޷����� DOMAIN,���ֶ����ڵ����address��host��sni��ΪӦ������"
-          fi
-        fi
+        echo "All env vars set"
 
     - name: Restage application
       run: |
@@ -380,23 +202,20 @@ MANIFEST_EOF
         cf env ${{ env.APP_NAME }}
         echo "=== Recent logs ==="
         cf logs ${{ env.APP_NAME }} --recent 2>&1
+
     - name: Verify deployment
       run: |
         cf app ${{ env.APP_NAME }}
-        echo "Deployment completed successfully!"
+        echo "Deployment completed!"
 
-    - name: ��ϸ������Ϣ
+    - name: Deployment info
       run: |
-        echo "������ɣ���ϸ��Ϣ���£�"
-        echo "����(Region): ${{ github.event.inputs.region }}"
-        echo "��֯(ORG): ${{ env.ORG }}"
-        echo "�ռ�(SPACE): ${{ env.SPACE }}"
-        echo "Ӧ������(App Name): ${{ env.APP_NAME }}"
-        echo "������(Docker Image): ${{ env.DOCKER_IMAGE }}"
-
+        echo "Region: ${{ github.event.inputs.region }}"
+        echo "Org: ${{ env.ORG }}"
+        echo "Space: ${{ env.SPACE }}"
+        echo "App: ${{ env.APP_NAME }}"
+        echo "Image: ${{ env.DOCKER_IMAGE }}"
         ROUTE=$(cf app ${{ env.APP_NAME }} | grep "routes:" | awk '{print $2}')
         if [ -n "$ROUTE" ]; then
-          echo "Ӧ�� URL (APP_URL): https://$ROUTE"
-        else
-          echo "δ�ҵ�Ӧ��·�ɣ����鲿��״̬��"
+          echo "URL: https://$ROUTE"
         fi
