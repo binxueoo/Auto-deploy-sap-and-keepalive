@@ -292,10 +292,38 @@ jobs:
           echo "没有已部署的应用，无需清理"
         fi
 
+    # Env vars will be set via manifest.yml
+      run: |
+        cat > manifest.yml << 'MANIFEST_EOF'
+applications:
+  - name: ${{ env.APP_NAME }}
+    memory: ${{ env.MEMORY }}
+    disk_quota: ${{ env.DISK }}
+    docker:
+      image: ${{ env.DOCKER_IMAGE }}
+    health-check-type: port
+    env:
+      NAME: SAP
+      UUID: ${{ secrets.UUID }}
+      NEZHA_SERVER: ${{ secrets.NEZHA_SERVER }}
+      NEZHA_PORT: ${{ secrets.NEZHA_PORT }}
+      NEZHA_KEY: ${{ secrets.NEZHA_KEY }}
+      ARGO_PORT: ${{ secrets.ARGO_PORT }}
+      ARGO_DOMAIN: ${{ secrets.ARGO_DOMAIN }}
+      ARGO_AUTH: ${{ secrets.ARGO_AUTH }}
+      SUB_PATH: ${{ secrets.SUB_PATH }}
+      CFIP: ${{ secrets.CFIP || 'cf.877774.xyz' }}
+      CFPORT: ${{ secrets.CFPORT }}
+      CHAT_ID: ${{ secrets.CHAT_ID }}
+      BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+MANIFEST_EOF
+        echo "=== manifest.yml ==="
+        cat manifest.yml | grep -v "ARGO_AUTH" | grep -v "NEZHA_KEY" | grep -v "UUID"
+        echo "ARGO_AUTH is set: $(grep -c 'ARGO_AUTH' manifest.yml)"
     - name: Deploy application
       run: |
         echo "Deploying with image: ${{ env.DOCKER_IMAGE }}"
-        if cf push ${{ env.APP_NAME }} --docker-image ${{ env.DOCKER_IMAGE }} -m ${{ env.MEMORY }} -k ${{ env.DISK }} --health-check-type port; then
+        if cf push ${{ env.APP_NAME }} --docker-image ${{ env.DOCKER_IMAGE }} -m ${{ env.MEMORY }} -k ${{ env.DISK }} --health-check-type port -e ARGO_AUTH="${{ secrets.ARGO_AUTH }}" -e ARGO_DOMAIN="${{ secrets.ARGO_DOMAIN }}" -e ARGO_PORT="${{ secrets.ARGO_PORT }}" -e SUB_PATH="${{ secrets.SUB_PATH }}" -e UUID="${{ secrets.UUID }}" -e NAME="SAP" -e NEZHA_SERVER="${{ secrets.NEZHA_SERVER }}" -e NEZHA_PORT="${{ secrets.NEZHA_PORT }}" -e NEZHA_KEY="${{ secrets.NEZHA_KEY }}" -e CFIP="${{ secrets.CFIP }}" -e CFPORT="${{ secrets.CFPORT }}" -e BOT_TOKEN="${{ secrets.BOT_TOKEN }}" -e CHAT_ID="${{ secrets.CHAT_ID }}"; then
           echo "Deployment successful"
         else
           cf delete ${{ env.APP_NAME }} -r -f
