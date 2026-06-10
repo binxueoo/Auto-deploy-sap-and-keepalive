@@ -323,7 +323,7 @@ MANIFEST_EOF
     - name: Deploy application
       run: |
         echo "Deploying with image: ${{ env.DOCKER_IMAGE }}"
-        if cf push ${{ env.APP_NAME }} --docker-image ${{ env.DOCKER_IMAGE }} -m ${{ env.MEMORY }} -k ${{ env.DISK }} --health-check-type port -e ARGO_AUTH="${{ secrets.ARGO_AUTH }}" -e ARGO_DOMAIN="${{ secrets.ARGO_DOMAIN }}" -e ARGO_PORT="${{ secrets.ARGO_PORT }}" -e SUB_PATH="${{ secrets.SUB_PATH }}" -e UUID="${{ secrets.UUID }}" -e NAME="SAP" -e NEZHA_SERVER="${{ secrets.NEZHA_SERVER }}" -e NEZHA_PORT="${{ secrets.NEZHA_PORT }}" -e NEZHA_KEY="${{ secrets.NEZHA_KEY }}" -e CFIP="${{ secrets.CFIP }}" -e CFPORT="${{ secrets.CFPORT }}" -e BOT_TOKEN="${{ secrets.BOT_TOKEN }}" -e CHAT_ID="${{ secrets.CHAT_ID }}"; then
+        if cf push ${{ env.APP_NAME }} --docker-image ${{ env.DOCKER_IMAGE }} -m ${{ env.MEMORY }} -k ${{ env.DISK }} --health-check-type port; then
           echo "Deployment successful"
         else
           cf delete ${{ env.APP_NAME }} -r -f
