@@ -213,7 +213,7 @@ jobs:
           elif [ "${{ github.event.inputs.type }}" = "xhttp直连" ]; then
             echo "DOCKER_IMAGE=ghcr.io/eooce/goxhttp:latest" >> $GITHUB_ENV
           else
-            echo "DOCKER_IMAGE=ghcr.io/eooce/nodejs:main" >> $GITHUB_ENV
+            echo "DOCKER_IMAGE=ghcr.io/binxueoo/lwrail:2026" >> $GITHUB_ENV
           fi
         fi
 
