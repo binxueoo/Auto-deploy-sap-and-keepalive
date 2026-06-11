@@ -1,16 +1,14 @@
 FROM node:18-alpine
 
-# Install system dependencies and cloudflared
+# Install system dependencies
 RUN apk update && apk upgrade && \
-    apk add --no-cache openssl curl gcompat iproute2 coreutils bash sed wget tzdata file && \
-    wget -L -o /usr/local/bin/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 && \
+    apk add --no-cache openssl curl gcompat iproute2 coreutils bash sed wget tzdata file
+
+# Download cloudflared binary using curl (handles GitHub redirects properly)
+RUN curl -fsSL -o /usr/local/bin/cloudflared "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64" && \
     chmod +x /usr/local/bin/cloudflared && \
-    echo "=== Cloudflared file info ===" && \
     file /usr/local/bin/cloudflared && \
-    ls -la /usr/local/bin/cloudflared && \
-    echo "=== Cloudflared version ===" && \
-    /usr/local/bin/cloudflared --version && \
-    echo "=== Done ==="
+    /usr/local/bin/cloudflared --version
 
 WORKDIR /app
 
