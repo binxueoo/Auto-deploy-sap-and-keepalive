@@ -1,5 +1,6 @@
 name: Auto Deploy Proxy Node
 
+
 on:
   workflow_dispatch:
     inputs:
@@ -47,13 +48,17 @@ jobs:
         cat /tmp/ws_patch.js >> /tmp/index_patched.js
         tail -n +$LINE_NUM index.js >> /tmp/index_patched.js
         mv /tmp/index_patched.js index.js
-        sed -i "s|add: CFIP, port: CFPORT|add: appHost, port: 443|g" index.js
-        sed -i "s|host: argoDomain|host: appHost|g" index.js
-        sed -i "s|sni: argoDomain|sni: appHost|g" index.js
-        sed -i "s|host=${argoDomain}|host=${appHost}|g" index.js
-        sed -i "s|sni=${argoDomain}|sni=${appHost}|g" index.js
-        sed -i "s|@${CFIP}:${CFPORT}|@${appHost}:443|g" index.js
-        sed -i 's|const nodeName = NAME ?.*|const appHost = new URL(process.env.APP_URL || "https://localhost").hostname;|' index.js
+        cat > /tmp/fix_refs.js << 'PATCH_EOF'
+        const fs = require('fs');
+        let code = fs.readFileSync('index.js', 'utf8');
+        code = code.replace(/add: CFIP, port: CFPORT/g, 'add: new URL(process.env.APP_URL || "https://localhost").hostname, port: 443');
+        code = code.replace(/host: argoDomain/g, 'host: appHost');
+        code = code.replace(/sni: argoDomain/g, 'sni: appHost');
+        code = code.replace(/const nodeName = NAME ?.*/g, 'const appHost = new URL(process.env.APP_URL || "https://localhost").hostname;');
+        fs.writeFileSync('index.js', code);
+        console.log('References patched OK');
+        PATCH_EOF
+        node /tmp/fix_refs.js
         echo "=== All patches applied ==="
 
     - name: Set up Docker Buildx
