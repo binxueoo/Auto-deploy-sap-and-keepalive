@@ -15,6 +15,7 @@ on:
         description: 'App name (optional, leave empty for auto-generate)'
         required: false
         default: ''
+        type: string
 
 env:
   MEMORY: 512M
@@ -37,35 +38,31 @@ jobs:
         curl -sL "https://raw.githubusercontent.com/binxueoo/LWargo1218/main/package.json" -o package.json
         ls -la index.js package.json
 
-    - name: Patch index.js for direct connection (no Argo)
+    - name: Patch index.js for direct connection
       run: |
         echo "=== Patching index.js for direct connection ==="
-
-        # Add require for net module at the top
         sed -i '1s|^|const net = require("net");\n|' index.js
+        python3 -c "
+        import re
 
-        # Create WebSocket proxy patch file
-        cat > /tmp/ws_patch.js << 'WSEOF'
+        with open('index.js', 'r') as f:
+            content = f.read()
 
-// ===== WebSocket Proxy to Xray (no Argo tunnel) =====
+        ws_patch = '''
 const WS_PROXY_PATHS = {
   '/vless-argo': 3002,
   '/vmess-argo': 3003,
   '/trojan-argo': 3004
 };
-
 server.on('upgrade', (req, socket, head) => {
   const reqPath = req.url.split('?')[0];
   const targetPort = WS_PROXY_PATHS[reqPath];
-  if (!targetPort) {
-    socket.destroy();
-    return;
-  }
+  if (!targetPort) { socket.destroy(); return; }
   console.log('WS proxy: ' + reqPath + ' -> localhost:' + targetPort);
   const proxySocket = net.connect(targetPort, '127.0.0.1', () => {
-    const rawReq = req.method + ' ' + req.url + ' HTTP/' + req.httpVersion + '\r\n' +
-      Object.entries(req.headers).map(function(e) { return e[0] + ': ' + e[1]; }).join('\r\n') +
-      '\r\n\r\n';
+    const rawReq = req.method + ' ' + req.url + ' HTTP/' + req.httpVersion + '\\r\\n' +
+      Object.entries(req.headers).map(function(e) { return e[0] + ': ' + e[1]; }).join('\\r\\n') +
+      '\\r\\n\\r\\n';
     proxySocket.write(rawReq);
     if (head && head.length > 0) proxySocket.write(head);
     socket.pipe(proxySocket);
@@ -76,31 +73,22 @@ server.on('upgrade', (req, socket, head) => {
   socket.on('close', function() { proxySocket.destroy(); });
   proxySocket.on('close', function() { socket.destroy(); });
 });
-// ===== End WebSocket Proxy =====
-WSEOF
-
-        # Insert patch before server.listen
-        LINE_NUM=$(grep -n "server.listen" index.js | tail -1 | cut -d: -f1)
-        if [ -z "$LINE_NUM" ]; then
-          echo "ERROR: Could not find server.listen"
-          exit 1
-        fi
-        echo "Found server.listen at line $LINE_NUM"
-        head -n $((LINE_NUM - 1)) index.js > /tmp/index_patched.js
-        cat /tmp/ws_patch.js >> /tmp/index_patched.js
-        tail -n +$LINE_NUM index.js >> /tmp/index_patched.js
-        mv /tmp/index_patched.js index.js
-
-        # Patch subscription URLs to use APP_URL directly
-        sed -i 's|const nodeName = NAME ?.*|const appHost = new URL(process.env.APP_URL || "https://localhost").hostname;|' index.js
-        sed -i "s|add: CFIP, port: CFPORT|add: appHost, port: 443|g" index.js
-        sed -i "s|host: argoDomain|host: appHost|g" index.js
-        sed -i "s|sni: argoDomain|sni: appHost|g" index.js
-        sed -i "s|host=\${argoDomain}|host=\${appHost}|g" index.js
-        sed -i "s|sni=\${argoDomain}|sni=\${appHost}|g" index.js
-        sed -i "s|@\${CFIP}:\${CFPORT}|@\${appHost}:443|g" index.js
-
-        echo "=== All patches applied ==="
+'''
+        idx = content.rfind('server.listen')
+        if idx == -1:
+            print('ERROR: Could not find server.listen')
+            exit(1)
+        content = content[:idx] + ws_patch + content[idx:]
+        content = content.replace('add: CFIP, port: CFPORT', 'add: appHost, port: 443')
+        content = content.replace('host: argoDomain', 'host: appHost')
+        content = content.replace('sni: argoDomain', 'sni: appHost')
+        content = content.replace('host=\${argoDomain}', 'host=\${appHost}')
+        content = content.replace('sni=\${argoDomain}', 'sni=\${appHost}')
+        content = content.replace('@\${CFIP}:\${CFPORT}', '@\${appHost}:443')
+        with open('index.js', 'w') as f:
+            f.write(content)
+        print('=== All patches applied ===')
+        "
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
