@@ -74,6 +74,14 @@ jobs:
         curl -sL "https://raw.githubusercontent.com/binxueoo/LWargo1218/main/package.json" -o package.json
         ls -la index.js package.json
 
+    - name: Patch cloudflared to use HTTP/2 protocol
+      run: |
+        echo "Patching cloudflared to use HTTP/2 instead of QUIC (UDP)..."
+        sed -i 's/tunnel --token/tunnel --protocol http2 --token/' index.js
+        echo "Verifying patch..."
+        grep -n "protocol http2" index.js || { echo "Patch failed!"; exit 1; }
+        echo "Patch applied successfully!"
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
