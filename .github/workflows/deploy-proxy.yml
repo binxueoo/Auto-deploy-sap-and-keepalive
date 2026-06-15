@@ -15,7 +15,7 @@ on:
       region:
         description: 'Select region'
         required: true
-        default: 'US(free)'
+        default: 'SG(free)'
         type: choice
         options:
           - SG(free)
