@@ -37,20 +37,14 @@ jobs:
         curl -sL "https://raw.githubusercontent.com/binxueoo/LWargo1218/main/package.json" -o package.json
         ls -la index.js package.json
 
-    - name: Patch index.js - Add WebSocket proxy to Xray
+    - name: Patch index.js for direct connection (no Argo)
       run: |
-        echo "=== Patching index.js for direct connection (no Argo tunnel) ==="
+        echo "=== Patching index.js for direct connection ==="
 
-        # 1. Add websocket-stream dependency
-        cat >> package.json << 'EOF'
+        # Add require for net module at the top
+        sed -i '1s|^|const net = require("net");\n|' index.js
 
-        echo "Added ws dependency to package.json"
-
-        # 2. Add require statements at the top
-        sed -i "1s|^|const { URL } = require('url');\nconst net = require('net');\n|" index.js
-
-        # 3. Add WebSocket upgrade handler BEFORE the server.listen line
-        # We insert the upgrade handler right before server.listen
+        # Create WebSocket proxy patch file
         cat > /tmp/ws_patch.js << 'WSEOF'
 
 // ===== WebSocket Proxy to Xray (no Argo tunnel) =====
@@ -63,74 +57,49 @@ const WS_PROXY_PATHS = {
 server.on('upgrade', (req, socket, head) => {
   const reqPath = req.url.split('?')[0];
   const targetPort = WS_PROXY_PATHS[reqPath];
-
   if (!targetPort) {
-    console.log(`WebSocket upgrade rejected: unknown path ${reqPath}`);
     socket.destroy();
     return;
   }
-
-  console.log(`WebSocket proxy: ${reqPath} -> localhost:${targetPort}`);
-
+  console.log('WS proxy: ' + reqPath + ' -> localhost:' + targetPort);
   const proxySocket = net.connect(targetPort, '127.0.0.1', () => {
-    // Send the HTTP upgrade request to Xray
-    const rawReq = `${req.method} ${req.url} HTTP/${req.httpVersion}\r\n` +
-      Object.entries(req.headers).map(([k, v]) => `${k}: ${v}`).join('\r\n') +
+    const rawReq = req.method + ' ' + req.url + ' HTTP/' + req.httpVersion + '\r\n' +
+      Object.entries(req.headers).map(function(e) { return e[0] + ': ' + e[1]; }).join('\r\n') +
       '\r\n\r\n';
     proxySocket.write(rawReq);
     if (head && head.length > 0) proxySocket.write(head);
-
-    // Bidirectional pipe
     socket.pipe(proxySocket);
     proxySocket.pipe(socket);
   });
-
-  proxySocket.on('error', (err) => {
-    console.error(`Proxy socket error (port ${targetPort}): ${err.message}`);
-    socket.destroy();
-  });
-
-  socket.on('error', (err) => {
-    console.error(`Client socket error: ${err.message}`);
-    proxySocket.destroy();
-  });
-
-  socket.on('close', () => proxySocket.destroy());
-  proxySocket.on('close', () => socket.destroy());
+  proxySocket.on('error', function() { socket.destroy(); });
+  socket.on('error', function() { proxySocket.destroy(); });
+  socket.on('close', function() { proxySocket.destroy(); });
+  proxySocket.on('close', function() { socket.destroy(); });
 });
 // ===== End WebSocket Proxy =====
 WSEOF
 
-        # Insert the WebSocket proxy code before the last line (server.listen)
-        # Find the line with server.listen and insert our code before it
+        # Insert patch before server.listen
         LINE_NUM=$(grep -n "server.listen" index.js | tail -1 | cut -d: -f1)
         if [ -z "$LINE_NUM" ]; then
-          echo "ERROR: Could not find server.listen line!"
+          echo "ERROR: Could not find server.listen"
           exit 1
         fi
         echo "Found server.listen at line $LINE_NUM"
-
-        # Split file at that line and insert our patch
         head -n $((LINE_NUM - 1)) index.js > /tmp/index_patched.js
         cat /tmp/ws_patch.js >> /tmp/index_patched.js
         tail -n +$LINE_NUM index.js >> /tmp/index_patched.js
         mv /tmp/index_patched.js index.js
 
-        echo "WebSocket proxy patch applied successfully!"
+        # Patch subscription URLs to use APP_URL directly
+        sed -i 's|const nodeName = NAME ?.*|const appHost = new URL(process.env.APP_URL || "https://localhost").hostname;|' index.js
+        sed -i "s|add: CFIP, port: CFPORT|add: appHost, port: 443|g" index.js
+        sed -i "s|host: argoDomain|host: appHost|g" index.js
+        sed -i "s|sni: argoDomain|sni: appHost|g" index.js
+        sed -i "s|host=\${argoDomain}|host=\${appHost}|g" index.js
+        sed -i "s|sni=\${argoDomain}|sni=\${appHost}|g" index.js
+        sed -i "s|@\${CFIP}:\${CFPORT}|@\${appHost}:443|g" index.js
 
-        # 4. Patch generateLinks to use APP_URL instead of ARGO_DOMAIN
-        # The original code uses argoDomain as host/sni in subscription links
-        # We need to use APP_URL hostname instead
-        sed -i 's/const nodeName = NAME ? .*/const appHost = new URL(process.env.APP_URL || ("https://" + process.env.APP_URL)).hostname;/' index.js
-        sed -i "s/add: CFIP, port: CFPORT, id: UUID, aid: '0', scy: 'auto', net: 'ws', type: 'none', host: argoDomain/add: appHost, port: 443, id: UUID, aid: '0', scy: 'auto', net: 'ws', type: 'none', host: appHost/" index.js
-        sed -i "s/sni: argoDomain/sni: appHost/" index.js
-        sed -i "s/host=\${argoDomain}/host=\${appHost}/" index.js
-        sed -i "s/sni=\${argoDomain}/sni=\${appHost}/" index.js
-
-        # Also fix the vless and trojan URL strings
-        sed -i "s/@\${CFIP}:\${CFPORT}/@\${appHost}:443/" index.js
-
-        echo "Subscription URL patched to use direct SAP app URL"
         echo "=== All patches applied ==="
 
     - name: Set up Docker Buildx
@@ -164,52 +133,31 @@ WSEOF
     - name: Determine CF API endpoint and app name
       run: |
         RANDOM_STR=$(head /dev/urandom | tr -dc 'a-z' | head -c 6)
-
         case "${{ github.event.inputs.region }}" in
           "SG(free)")
             echo "CF_API=https://api.cf.ap21.hana.ondemand.com" >> $GITHUB_ENV
             echo "APP_NAME=free-sg$RANDOM_STR" >> $GITHUB_ENV
             ;;
-          "US(free)")
+          *)
             echo "CF_API=https://api.cf.us10-001.hana.ondemand.com" >> $GITHUB_ENV
             echo "APP_NAME=free-us$RANDOM_STR" >> $GITHUB_ENV
             ;;
-          *)
-            echo "CF_API=https://api.cf.ap21.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=free-sg$RANDOM_STR" >> $GITHUB_ENV
-            ;;
         esac
-
         if [ -n "${{ github.event.inputs.app_name }}" ]; then
           echo "APP_NAME=${{ github.event.inputs.app_name }}" >> $GITHUB_ENV
         fi
-
-        if [[ -n "${{ secrets.DOCKER_IMAGE }}" ]]; then
-          echo "DOCKER_IMAGE=${{ secrets.DOCKER_IMAGE }}" >> $GITHUB_ENV
-        else
-          echo "DOCKER_IMAGE=ghcr.io/binxueoo/sap-node:latest" >> $GITHUB_ENV
-        fi
-
-        echo "CF_API=$CF_API"
+        echo "DOCKER_IMAGE=ghcr.io/binxueoo/sap-node:latest" >> $GITHUB_ENV
         echo "APP_NAME=$APP_NAME"
-        echo "DOCKER_IMAGE=${{ env.DOCKER_IMAGE }}"
 
     - name: Login to Cloud Foundry
       run: |
-        echo "--- Step 1: Login CF ---"
         cf login -a ${{ env.CF_API }} -u "${{ secrets.EMAIL }}" -p "${{ secrets.PASSWORD }}" && echo "Login OK" || { echo "CF login failed"; exit 1; }
-
-        echo "--- Step 2: Get org ---"
         ORG=$(cf orgs 2>/dev/null | awk 'NR>=4 {print $1}' | head -1)
         if [ -z "$ORG" ]; then echo "No org found"; exit 1; fi
         echo "ORG=$ORG" >> $GITHUB_ENV
-
-        echo "--- Step 3: Get space ---"
         SPACE=$(cf spaces 2>/dev/null | awk 'NR>=4 {print $1}' | head -1)
         if [ -z "$SPACE" ]; then echo "No space found"; exit 1; fi
         echo "SPACE=$SPACE" >> $GITHUB_ENV
-
-        echo "--- Step 4: Re-login with org/space ---"
         cf login -a ${{ env.CF_API }} -u "${{ secrets.EMAIL }}" -p "${{ secrets.PASSWORD }}" -o "$ORG" -s "$SPACE" || { echo "Re-login failed"; exit 1; }
         cf target
 
@@ -236,12 +184,10 @@ WSEOF
 
     - name: Set environment variables
       run: |
-        # Calculate the app URL
         APP_URL="https://${{ env.APP_NAME }}.cfapps.ap21.hana.ondemand.com"
         if [[ "${{ github.event.inputs.region }}" == "US(free)" ]]; then
           APP_URL="https://${{ env.APP_NAME }}.cfapps.us10-001.hana.ondemand.com"
         fi
-
         cf set-env ${{ env.APP_NAME }} NAME "SAP"
         cf set-env ${{ env.APP_NAME }} UUID "${{ secrets.UUID }}"
         cf set-env ${{ env.APP_NAME }} NEZHA_SERVER "${{ secrets.NEZHA_SERVER }}"
@@ -256,41 +202,23 @@ WSEOF
         cf set-env ${{ env.APP_NAME }} APP_URL "$APP_URL"
         cf set-env ${{ env.APP_NAME }} CHAT_ID "${{ secrets.CHAT_ID }}"
         cf set-env ${{ env.APP_NAME }} BOT_TOKEN "${{ secrets.BOT_TOKEN }}"
-        echo "All env vars set"
-        echo "APP_URL=$APP_URL"
+        echo "All env vars set. APP_URL=$APP_URL"
 
     - name: Restage application
-      run: |
-        cf restage ${{ env.APP_NAME }}
+      run: cf restage ${{ env.APP_NAME }}
 
     - name: Check app logs
       run: |
-        echo "=== Environment variables ==="
         cf env ${{ env.APP_NAME }}
-        echo "=== Recent logs ==="
         cf logs ${{ env.APP_NAME }} --recent 2>&1
-
-    - name: Verify deployment
-      run: |
-        cf app ${{ env.APP_NAME }}
-        echo "Deployment completed!"
 
     - name: Deployment info
       run: |
         echo "=========================================="
         echo "  DEPLOYMENT SUCCESSFUL (No Argo Tunnel)"
         echo "=========================================="
-        echo "Region: ${{ github.event.inputs.region }}"
-        echo "Org: ${{ env.ORG }}"
-        echo "Space: ${{ env.SPACE }}"
-        echo "App: ${{ env.APP_NAME }}"
-        echo "Image: ${{ env.DOCKER_IMAGE }}"
         ROUTE=$(cf app ${{ env.APP_NAME }} | grep "routes:" | awk '{print $2}')
-        if [ -n "$ROUTE" ]; then
-          echo "URL: https://$ROUTE"
-          echo "Subscription: https://$ROUTE/${{ secrets.SUB_PATH }}"
-          echo ""
-          echo "NOTE: No Argo tunnel needed!"
-          echo "V2Ray clients connect directly to the SAP app."
-        fi
+        echo "App: ${{ env.APP_NAME }}"
+        echo "URL: https://$ROUTE"
+        echo "Subscription: https://$ROUTE/${{ secrets.SUB_PATH }}"
         echo "=========================================="
