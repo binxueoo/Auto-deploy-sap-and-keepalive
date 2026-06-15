@@ -33,33 +33,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Download and patch index.js
+    - name: Download index.js
       run: |
-        curl -sL "https://raw.githubusercontent.com/binxueoo/LWargo1218/main/index.js" -o index.js
-        curl -sL "https://raw.githubusercontent.com/binxueoo/LWargo1218/main/package.json" -o package.json
-        ls -la index.js package.json
-        echo "=== Patching index.js for direct connection ==="
-        sed -i '1s|^|const net = require("net");\n|' index.js
-        echo 'Y29uc3QgV1NfUFJPWFlfUEFUSFMgPSB7CiAgJy92bGVzcy1hcmdvJzogMzAwMiwKICAnL3ZtZXNzLWFyZ28nOiAzMDAzLAogICcvdHJvamFuLWFyZ28nOiAzMDA0Cn07CnNlcnZlci5vbigndXBncmFkZScsIChyZXEsIHNvY2tldCwgaGVhZCkgPT4gewogIGNvbnN0IHJlcVBhdGggPSByZXEudXJsLnNwbGl0KCc/JylbMF07CiAgY29uc3QgdGFyZ2V0UG9ydCA9IFdTX1BST1hZX1BBVEhTW3JlcVBhdGhdOwogIGlmICghdGFyZ2V0UG9ydCkgeyBzb2NrZXQuZGVzdHJveSgpOyByZXR1cm47IH0KICBjb25zb2xlLmxvZygnV1MgcHJveHk6ICcgKyByZXBhdGggKyAnIC0+IGxvY2FsaG9zdDonICsgdGFyZ2V0UG9ydCk7CiAgY29uc3QgcHJveHlTb2NrZXQgPSBuZXQuY29ubmVjdCh0YXJnZXRQb3J0LCAnMTI3LjAuMC4xJywgKCkgPT4gewogICAgY29uc3QgcmF3UmVxID0gcmVxLm1ldGhvZCArICcgJyArIHJlcS51cmwgKyAnIEhUVFAvJyArIHJlcS5odHRwVmVyc2lvbiArICdcclxuJyArCiAgICAgIE9iamVjdC5lbnRyaWVzKHJlcS5oZWFkZXJzKS5tYXAoZnVuY3Rpb24oZSkgeyByZXR1cm4gZVswXSArICc6ICcgKyBlWzFdOyB9KS5qb2luKCdcclxuJykgKwogICAgICAnXHJcblxyXG4nOwogICAgcHJveHlTb2NrZXQud3JpdGUocmF3UmVxKTsKICAgIGlmIChoZWFkICYmIGhlYWQubGVuZ3RoID4gMCkgcHJveHlTb2NrZXQud3JpdGUoaGVhZCk7CiAgICBzb2NrZXQucGlwZShwcm94eVNvY2tldCk7CiAgICBwcm94eVNvY2tldC5waXBlKHNvY2tldCk7CiAgfSk7CiAgcHJveHlTb2NrZXQub24oJ2Vycm9yJywgZnVuY3Rpb24oKSB7IHNvY2tldC5kZXN0cm95KCk7IH0pOwogIHNvY2tldC5vbignZXJyb3InLCBmdW5jdGlvbigpIHsgcHJveHlTb2NrZXQuZGVzdHJveSgpOyB9KTsKICBzb2NrZXQub24oJ2Nsb3NlJywgZnVuY3Rpb24oKSB7IHByb3h5U29ja2V0LmRlc3Ryb3koKTsgfSk7CiAgcHJveHlTb2NrZXQub24oJ2Nsb3NlJywgZnVuY3Rpb24oKSB7IHNvY2tldC5kZXN0cm95KCk7IH0pOwp9KTsK' | base64 -d > /tmp/ws_patch.js
-        LINE_NUM=$(grep -n "server.listen" index.js | tail -1 | cut -d: -f1)
-        if [ -z "$LINE_NUM" ]; then echo "ERROR: Could not find server.listen"; exit 1; fi
-        echo "Found server.listen at line $LINE_NUM"
-        head -n $((LINE_NUM - 1)) index.js > /tmp/index_patched.js
-        cat /tmp/ws_patch.js >> /tmp/index_patched.js
-        tail -n +$LINE_NUM index.js >> /tmp/index_patched.js
-        mv /tmp/index_patched.js index.js
-        cat > /tmp/fix_refs.js << 'PATCH_EOF'
-        const fs = require('fs');
-        let code = fs.readFileSync('index.js', 'utf8');
-        code = code.replace(/add: CFIP, port: CFPORT/g, 'add: new URL(process.env.APP_URL || "https://localhost").hostname, port: 443');
-        code = code.replace(/host: argoDomain/g, 'host: appHost');
-        code = code.replace(/sni: argoDomain/g, 'sni: appHost');
-        code = code.replace(/const nodeName = NAME ?.*/g, 'const appHost = new URL(process.env.APP_URL || "https://localhost").hostname;');
-        fs.writeFileSync('index.js', code);
-        console.log('References patched OK');
-        PATCH_EOF
-        node /tmp/fix_refs.js
-        echo "=== All patches applied ==="
+        curl -sL https://raw.githubusercontent.com/binxueoo/LWargo1218/main/index.js -o index.js
+        echo "Downloaded index.js"
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -76,108 +53,74 @@ jobs:
       with:
         context: .
         push: true
-        tags: ghcr.io/binxueoo/sap-node:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        tags: ghcr.io/${{ github.repository_owner }}/sap-node:latest
 
     - name: Install CF CLI
       run: |
-        sudo apt-get update
-        sudo apt-get install -y wget curl gnupg
-        wget -q -O - https://packages.cloudfoundry.org/debian/cli.cloudfoundry.org.key | sudo gpg --dearmor -o /usr/share/keyrings/cloudfoundry-cli.gpg
-        echo "deb [signed-by=/usr/share/keyrings/cloudfoundry-cli.gpg] https://packages.cloudfoundry.org/debian stable main" | sudo tee /etc/apt/sources.list.d/cloudfoundry-cli.list
-        sudo apt-get update
-        sudo apt-get install -y cf8-cli
+        curl -L "https://packages.cloudfoundry.org/stable?release=linux64-binary&version=v8&source=github" | tar -zx
+        sudo mv cf8 /usr/local/bin/cf
+        cf version
 
     - name: Determine CF API endpoint and app name
+      id: cf-config
       run: |
-        RANDOM_STR=$(head /dev/urandom | tr -dc 'a-z' | head -c 6)
-        case "${{ github.event.inputs.region }}" in
-          "SG(free)")
-            echo "CF_API=https://api.cf.ap21.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=free-sg$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-          *)
-            echo "CF_API=https://api.cf.us10-001.hana.ondemand.com" >> $GITHUB_ENV
-            echo "APP_NAME=free-us$RANDOM_STR" >> $GITHUB_ENV
-            ;;
-        esac
-        if [ -n "${{ github.event.inputs.app_name }}" ]; then
-          echo "APP_NAME=${{ github.event.inputs.app_name }}" >> $GITHUB_ENV
+        REGION="${{ github.event.inputs.region }}"
+        if [ "$REGION" = "SG(free)" ]; then
+          echo "cf_api=https://api.cf.ap21.hana.ondemand.com" >> $GITHUB_OUTPUT
+        else
+          echo "cf_api=https://api.cf.us10-001.hana.ondemand.com" >> $GITHUB_OUTPUT
         fi
-        echo "DOCKER_IMAGE=ghcr.io/binxueoo/sap-node:latest" >> $GITHUB_ENV
-        echo "APP_NAME=$APP_NAME"
+
+        if [ -n "${{ github.event.inputs.app_name }}" ]; then
+          echo "app_name=${{ github.event.inputs.app_name }}" >> $GITHUB_OUTPUT
+        else
+          echo "app_name=free-sg$(openssl rand -hex 4)" >> $GITHUB_OUTPUT
+        fi
 
     - name: Login to Cloud Foundry
       run: |
-        cf login -a ${{ env.CF_API }} -u "${{ secrets.EMAIL }}" -p "${{ secrets.PASSWORD }}" && echo "Login OK" || { echo "CF login failed"; exit 1; }
-        ORG=$(cf orgs 2>/dev/null | awk 'NR>=4 {print $1}' | head -1)
-        if [ -z "$ORG" ]; then echo "No org found"; exit 1; fi
-        echo "ORG=$ORG" >> $GITHUB_ENV
-        SPACE=$(cf spaces 2>/dev/null | awk 'NR>=4 {print $1}' | head -1)
-        if [ -z "$SPACE" ]; then echo "No space found"; exit 1; fi
-        echo "SPACE=$SPACE" >> $GITHUB_ENV
-        cf login -a ${{ env.CF_API }} -u "${{ secrets.EMAIL }}" -p "${{ secrets.PASSWORD }}" -o "$ORG" -s "$SPACE" || { echo "Re-login failed"; exit 1; }
-        cf target
+        cf api ${{ steps.cf-config.outputs.cf_api }}
+        cf auth "${{ secrets.CF_USER }}" "${{ secrets.CF_PASSWORD }}"
+        cf target -o "${{ secrets.CF_ORG }}" -s "${{ secrets.CF_SPACE }}"
 
     - name: Clean up existing apps
       run: |
-        APPS=$(cf apps | awk 'NR>3 {print $1}')
-        if [ -n "$APPS" ]; then
-          for app in $APPS; do
-            cf delete "$app" -r -f
-          done
-          sleep 10
-        fi
+        APPS=$(cf apps | grep "^free-" | awk '{print $1}' || true)
+        for app in $APPS; do
+          cf delete "$app" -f -r 2>/dev/null || true
+        done
 
     - name: Deploy application
       run: |
-        echo "Deploying with image: ${{ env.DOCKER_IMAGE }}"
-        if cf push ${{ env.APP_NAME }} --docker-image ${{ env.DOCKER_IMAGE }} -m ${{ env.MEMORY }} -k ${{ env.DISK }} --health-check-type port; then
-          echo "Deployment successful"
-        else
-          cf delete ${{ env.APP_NAME }} -r -f
-          echo "Deployment failed"
-          exit 1
-        fi
+        APP_NAME="${{ steps.cf-config.outputs.app_name }}"
+        APP_URL="${APP_NAME}.cfapps.ap21.hana.ondemand.com"
+        echo "Deploying with image: ghcr.io/${{ github.repository_owner }}/sap-node:latest"
 
-    - name: Set environment variables
-      run: |
-        APP_URL="https://${{ env.APP_NAME }}.cfapps.ap21.hana.ondemand.com"
-        if [[ "${{ github.event.inputs.region }}" == "US(free)" ]]; then
-          APP_URL="https://${{ env.APP_NAME }}.cfapps.us10-001.hana.ondemand.com"
-        fi
-        cf set-env ${{ env.APP_NAME }} NAME "SAP"
-        cf set-env ${{ env.APP_NAME }} UUID "${{ secrets.UUID }}"
-        cf set-env ${{ env.APP_NAME }} NEZHA_SERVER "${{ secrets.NEZHA_SERVER }}"
-        cf set-env ${{ env.APP_NAME }} NEZHA_PORT "${{ secrets.NEZHA_PORT }}"
-        cf set-env ${{ env.APP_NAME }} NEZHA_KEY "${{ secrets.NEZHA_KEY }}"
-        cf set-env ${{ env.APP_NAME }} ARGO_PORT "${{ secrets.ARGO_PORT }}"
-        cf set-env ${{ env.APP_NAME }} ARGO_DOMAIN ""
-        cf set-env ${{ env.APP_NAME }} ARGO_AUTH ""
-        cf set-env ${{ env.APP_NAME }} SUB_PATH "${{ secrets.SUB_PATH }}"
-        cf set-env ${{ env.APP_NAME }} CFIP ""
-        cf set-env ${{ env.APP_NAME }} CFPORT ""
-        cf set-env ${{ env.APP_NAME }} APP_URL "$APP_URL"
-        cf set-env ${{ env.APP_NAME }} CHAT_ID "${{ secrets.CHAT_ID }}"
-        cf set-env ${{ env.APP_NAME }} BOT_TOKEN "${{ secrets.BOT_TOKEN }}"
-        echo "All env vars set. APP_URL=$APP_URL"
+        cf push "${APP_NAME}" \
+          --docker-image "ghcr.io/${{ github.repository_owner }}/sap-node:latest" \
+          -m 512M -k 512M \
+          --hostname "${APP_NAME}" \
+          --no-start
 
-    - name: Restage application
-      run: cf restage ${{ env.APP_NAME }}
+        # Set env vars: use SAP app URL as node address (direct connection, no Argo tunnel)
+        cf set-env "${APP_NAME}" CFIP "${APP_URL}"
+        cf set-env "${APP_NAME}" CFPORT "443"
+        cf set-env "${APP_NAME}" ARGO_DOMAIN "${APP_URL}"
+        cf set-env "${APP_NAME}" ARGO_AUTH "none"
+        cf set-env "${APP_NAME}" SUB_PATH "${{ secrets.SUB_PATH }}"
+        cf set-env "${APP_NAME}" UUID "${{ secrets.UUID }}"
+        cf set-env "${APP_NAME}" NEZHA_SERVER "${{ secrets.NEZHA_SERVER }}"
+        cf set-env "${APP_NAME}" NEZHA_PORT "${{ secrets.NEZHA_PORT }}"
+        cf set-env "${APP_NAME}" NEZHA_KEY "${{ secrets.NEZHA_KEY }}"
 
-    - name: Check app logs
-      run: |
-        cf env ${{ env.APP_NAME }}
-        cf logs ${{ env.APP_NAME }} --recent 2>&1
+        cf start "${APP_NAME}"
 
     - name: Deployment info
       run: |
-        echo "=========================================="
-        echo "  DEPLOYMENT SUCCESSFUL (No Argo Tunnel)"
-        echo "=========================================="
-        ROUTE=$(cf app ${{ env.APP_NAME }} | grep "routes:" | awk '{print $2}')
-        echo "App: ${{ env.APP_NAME }}"
-        echo "URL: https://$ROUTE"
-        echo "Subscription: https://$ROUTE/${{ secrets.SUB_PATH }}"
-        echo "=========================================="
+        APP_NAME="${{ steps.cf-config.outputs.app_name }}"
+        echo "=== Deployment Complete ==="
+        echo "App: ${APP_NAME}"
+        echo "URL: https://${APP_NAME}.cfapps.ap21.hana.ondemand.com"
+        echo "SUB: https://${APP_NAME}.cfapps.ap21.hana.ondemand.com/${{ secrets.SUB_PATH }}"
+        echo "Node address: ${APP_NAME}.cfapps.ap21.hana.ondemand.com:443"
+        echo "=========================="
